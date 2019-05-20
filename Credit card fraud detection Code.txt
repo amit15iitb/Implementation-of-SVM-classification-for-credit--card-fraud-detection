@@ -1,0 +1,75 @@
+from pandas import *
+from numpy import *
+from math import *
+from array import *
+from sklearn.utils import shuffle
+
+inp=read_csv("E:\ML\ML CLASSROOM\ML-ASSIGNMENT-2\creditcard.csv") 
+inp.loc[inp['Class'] ==0, 'Class'] = -1 # putting values of o to 1 in class colunm
+
+
+A1=inp.loc[inp['Class'] == 1] #taking class from the dataframe hvaing value 1
+a1=A1.sample(n = 100) # 100 random sample of fraud data i.e y=1
+#print(a1.shape)
+A0=inp.loc[inp['Class'] == -1] # taking data from dataframe having values -1
+a0=A0.sample(n = 100) # 100 random sample of non fraud data i.e. we changed y=0 to y=-1
+A=concat([a1, a0]) # merging the both data having value 1 and -1
+data=shuffle(A) # suffle the bit fraud and non fraud data in random way to make free from  baising
+
+Y=data['Class'] # creating output as classfrom the dataset
+trainy=int(round(len(Y)*0.8)) # making data 80% from the lenght of the dataset
+Y_train=Y.iloc[:trainy]
+Y_test=Y.iloc[trainy:]
+#training data
+data.drop(["Class"], axis = 1, inplace = True) # droping the data class from the dataset
+trainx=int(round(len(data)*.8))
+x_train=data.iloc[:trainx]
+x_test=data.iloc[trainx:]
+x_test.shape
+
+from cvxopt import *   # for convex optimization we have to import cvxopt library
+# making function as suitable to the standard function
+A=matrix(Y_train,tc='d')
+g=matrix(eye(160),tc='d')
+G=matrix((-1)*g,tc='d')
+h=matrix(zeros(160),tc='d')
+q=matrix(ones(160),tc='d')
+p=matrix((dot(dot(Y_train,Y_train.T),dot(x_train,x_train.T))),tc='d')
+b=matrix(zeros(1),tc='d')
+
+sol=solvers.qp(p,q,G,h,  kktsolver='ldl') # putting all values to the solver function
+
+alpha=matrix(sol['x']) # calculated value of alpha
+w_=multiply(alpha,A)
+#print(w_.shape)
+w=dot(x_train.T,w_) #calculated  value of w
+#print(w.shape)
+#calulate th vale of min{y=1}w*x i.e. having fraud data
+a1.drop(["Class"],axis =1,inplace=True)
+#print(a1.shape)
+y_1=dot(a1,w)
+#print(min(matrix(y_1)))
+a0.drop(["Class"],axis =1,inplace=True)
+y_0=dot(a0,w)
+B=(-.5)*(min(matrix(y_1))+max(matrix(y_0)))
+#print(B)                                # value of B calculated by min and max value 
+#print(a.shape)
+a_=((dot(x_test,w) +B )) 
+#print(a_.shape)          # calculate dvalue of a_ =w*x+B by using  test data
+#l=matrix(a_,tc='d')
+m_=(Y_test)
+m=matrix(m_,tc='d')
+#print(a_.shape)
+c=multiply(a_,m)               # value of output using test data
+#print(len(c))
+count=0
+#print(c)
+for i in range(len(c)): # counting value less than 1
+    if(c[i]<1):
+        count=count+1
+#print(count)
+#print(len(Y_test))
+accuracy=(1-(count/len(m_)))*100
+print("accuracy : {}".format(accuracy)) # final accuracy of the credit card dataset
+
+
